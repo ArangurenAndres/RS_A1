@@ -1,4 +1,4 @@
-from utils import preprocess as process
+from utils import preprocess_test as process
 from utils import dataloader as dataloader
 from model.model import NCF
 from train import train
