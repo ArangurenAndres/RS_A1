@@ -1,0 +1,54 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Environment folders
+env/
+venv/
+ENV/
+.venv/
+
+# VSCode & IDE configs
+.vscode/
+.idea/
+
+# Log files
+*.log
+
+# Model weights and training outputs
+*.pth
+*.pt
+trained_models/
+results/
+
+# Data files
+*.csv
+*.tsv
+*.dat
+*.h5
+*.db
+data_raw/
+data_preprocessed/
+
+# JSON configs and result logs
+loss_results.json
+config.json
+
+# System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Ignore temporary files
+*.swp
+*.swo
+*~
