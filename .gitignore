@@ -9,7 +9,7 @@ yarn-debug.log*
 yarn-error.log*
 *.png
 *.pth
-
+*.csv 
 # Ignore Python files
 __pycache__/
 *.pyc
@@ -18,6 +18,8 @@ __pycache__/
 .env
 venv/
 .envrc
+
+data_preprocessed/*
 
 # Ignore IDE/editor settings
 .vscode/
