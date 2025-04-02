@@ -1,4 +1,5 @@
-from utils import preprocess_test as process
+#from utils import preprocess_test as process
+from utils import kerem_preprocess as process 
 from utils import dataloader as dataloader
 from model.model import NCF
 from train import train
@@ -9,7 +10,7 @@ import os
 import pandas as pd  # Needed if you use evaluation
 
 def run(data_path: str = None, output_path: str = None, config_path: str = None,
-        results_path: str = "results", save_path: str = None):
+        results_path: str = "results", save_path: str = None,exp_name:str=None):
 
     # 0. Load config file with parameters values
     with open(config_path, 'r') as f:
@@ -23,9 +24,12 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     batch_size = config['batch_size']
     layers = config['layers']
     embedding_dim = config['embedding_dim']
+    dropout_rate = config['dropout_rate']
+    weight_decay = config['weight_decay']   
 
     # 1. Preprocess data (returns split data directly)
-    train_df, val_df, test_df = process.preprocess(data_path, output_path, save=True)
+
+    train_df, val_df, test_df = process.preprocess(data_path, output_path, save=False)
 
     # 2. Load data loaders
     train_loader, num_users, num_items = dataloader.get_dataloader_from_df(train_df, batch_size=batch_size, shuffle=True)
@@ -33,14 +37,16 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
 
     # 3. Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     model = NCF(num_users=num_users, num_items=num_items,
-                embedding_dim=embedding_dim, mlp_layers=layers).to(device)
+                embedding_dim=embedding_dim, mlp_layers=layers,
+                use_dropout=True,dropout_rate=dropout_rate).to(device)
 
     # 4. Train the model
     os.makedirs(save_path, exist_ok=True)
     train_losses, val_losses = train(model, train_loader, val_loader, device,
-                                     lr=lr, num_epochs=num_epochs, patience=patience,
-                                     use_early_stopping=False, save_path=save_path)
+                                     lr=lr, num_epochs=num_epochs, weight_decay=weight_decay,
+                                     patience=patience, use_early_stopping=False, save_path=save_path)
 
     # 5. Save training loss results
     os.makedirs(results_path, exist_ok=True)
@@ -48,7 +54,7 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
         "train_loss": train_losses,
         "val_loss": val_losses
     }
-    with open(os.path.join(results_path, "loss_results.json"), "w") as f:
+    with open(os.path.join(results_path, exp_name+".json"), "w") as f:
         json.dump(results, f, indent=4)
 
     # 6. (Optional) Evaluate on test set
@@ -66,4 +72,5 @@ if __name__ == "__main__":
     config_path = "config.json"
     results_path = "results"
     save_path = "trained_models"
-    run(data_path, output_path, config_path, results_path, save_path)
+    exp_name = "exp_dropout_l2_test"
+    run(data_path, output_path, config_path, results_path, save_path,exp_name=exp_name)

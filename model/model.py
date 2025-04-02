@@ -3,33 +3,37 @@ import torch.nn as nn
 import json
 
 class NCF(nn.Module):
-    def __init__(self, num_users, num_items, embedding_dim=32, mlp_layers=[32, 16, 8]):
+    def __init__(self, num_users, num_items, embedding_dim=32, mlp_layers=[32, 16, 8],
+                 use_dropout=False, dropout_rate=0.2):
         super(NCF, self).__init__()
         print("Initializing NCF model with the following parameters:")
         print(f"num_users: {num_users}")
         print(f"num_items: {num_items}")
         print(f"embedding_dim: {embedding_dim}")
         print(f"mlp_layers: {mlp_layers}")
+        print(f"use_dropout: {use_dropout}, dropout_rate: {dropout_rate}")
 
-        # Define the two sets of embeddings
-        # Embedding layers for GMF branch
-        self.gmf_user_embed = nn.Embedding(num_users, embedding_dim) # user embeddings for GMF
-        self.gmf_item_embed = nn.Embedding(num_items, embedding_dim) # item embeddings for GMF
-        # Embedding layers for MLP branch
-        self.mlp_user_embed = nn.Embedding(num_users, embedding_dim) # user embeddings for MLP
-        self.mlp_item_embed = nn.Embedding(num_items, embedding_dim) # item embeddings for MLP
+        # Embedding layers
+        self.gmf_user_embed = nn.Embedding(num_users, embedding_dim)
+        self.gmf_item_embed = nn.Embedding(num_items, embedding_dim)
+        self.mlp_user_embed = nn.Embedding(num_users, embedding_dim)
+        self.mlp_item_embed = nn.Embedding(num_items, embedding_dim)
 
-        mlp_input_size = embedding_dim * 2 # concatenate user and item
-         #Builds the MLP branch of the Neural Collaborative Filtering model.
-        mlp_modules = [] # List to hold the MLP layers
+        # Build MLP layers
+        mlp_input_size = embedding_dim * 2
+        mlp_modules = []
         for layer_size in mlp_layers:
-            
-            mlp_modules.append(nn.Linear(mlp_input_size, layer_size)) # Layer from inpout size to hidden_size
-            mlp_modules.append(nn.ReLU()) # After the Fully connected layer apply a ReLU activation function
+            mlp_modules.append(nn.Linear(mlp_input_size, layer_size))
+            mlp_modules.append(nn.ReLU())
+            if use_dropout:
+                print("Adding droput layer")
+                mlp_modules.append(nn.Dropout(p=dropout_rate))
             mlp_input_size = layer_size
-        self.mlp_layers = nn.Sequential(*mlp_modules) # Wrap all the layers into a single sequential module
-        # Calculate the dimension for the final output layer 
-        fusion_input_dim = embedding_dim + mlp_layers[-1] # We can do: embedding dimension + last dimension of last MLP layer
+
+        self.mlp_layers = nn.Sequential(*mlp_modules)
+
+        # Output layer
+        fusion_input_dim = embedding_dim + mlp_layers[-1]
         self.output_layer = nn.Linear(fusion_input_dim, 1)
         self.sigmoid = nn.Sigmoid()
 
@@ -43,10 +47,12 @@ class NCF(nn.Module):
         mlp_input = torch.cat([mlp_user, mlp_item], dim=-1)
         mlp_output = self.mlp_layers(mlp_input)
 
-        fusion = torch.cat([gmf_output, mlp_output], dim=-1) # Fusion layer to combine GMF and MLP outputs
-        logits = self.output_layer(fusion) # Final prediction is a single output passed through sigmoid
-        output = self.sigmoid(logits) 
+        fusion = torch.cat([gmf_output, mlp_output], dim=-1)
+        logits = self.output_layer(fusion)
+        output = self.sigmoid(logits)
         return output.squeeze()
+
+
 
 
 if __name__ == "__main__":

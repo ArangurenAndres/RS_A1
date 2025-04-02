@@ -8,10 +8,16 @@ from model.model import NCF
 from sklearn.model_selection import train_test_split
 
 
-def train(model, train_loader, val_loader, device, lr=0.001, num_epochs=5, patience=3, use_early_stopping=True, save_path:str="trained_models"):
+def train(model, train_loader, val_loader, device, lr=0.001,
+          num_epochs=5, weight_decay=0.0,patience=3, use_early_stopping=True, 
+          save_path:str="trained_models"):
     os.makedirs(save_path, exist_ok=True)
     criterion = nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    #optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    # Add L2 regualarization
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
+
 
     best_val_loss = float('inf')
     patience_counter = 0

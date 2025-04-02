@@ -32,5 +32,5 @@ def plot_loss_curve_from_file(results_path="results/loss_results.json", title="T
 
 
 if __name__ == "__main__":
-    results_path = "results/loss_results.json"
+    results_path = "results/exp_dropout_l2_test.json"
     plot_loss_curve_from_file(results_path)
