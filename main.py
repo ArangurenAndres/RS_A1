@@ -10,7 +10,8 @@ import os
 import pandas as pd  # Needed if you use evaluation
 
 def run(data_path: str = None, output_path: str = None, config_path: str = None,
-        results_path: str = "results", save_path: str = None,exp_name:str=None):
+        model_name:str="model.pth",results_path: str = "results", save_path: str = None,exp_name:str=None,
+        ablation: bool = False):
 
     # 0. Load config file with parameters values
     with open(config_path, 'r') as f:
@@ -46,7 +47,7 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     os.makedirs(save_path, exist_ok=True)
     train_losses, val_losses = train(model, train_loader, val_loader, device,
                                      lr=lr, num_epochs=num_epochs, weight_decay=weight_decay,
-                                     patience=patience, use_early_stopping=False, save_path=save_path)
+                                     patience=patience, use_early_stopping=False, save_path=save_path, model_name=model_name)
 
     # 5. Save training loss results
     os.makedirs(results_path, exist_ok=True)
@@ -54,8 +55,9 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
         "train_loss": train_losses,
         "val_loss": val_losses
     }
-    with open(os.path.join(results_path, exp_name+".json"), "w") as f:
-        json.dump(results, f, indent=4)
+    if not ablation:
+        with open(os.path.join(results_path, exp_name+".json"), "w") as f:
+            json.dump(results, f, indent=4)
 
     # 6. (Optional) Evaluate on test set
     # model_path = os.path.join(save_path, "model.pth")
@@ -64,6 +66,7 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     # all_items = pd.concat([train_df, val_df, test_df])['movieId'].unique()
     # avg_recall, avg_ndcg = evaluate(model, test_df, all_items, device, k=10)
     # print(f"Test Recall@10: {avg_recall:.4f}, NDCG@10: {avg_ndcg:.4f}")
+    return train_losses, val_losses
 
 
 if __name__ == "__main__":
@@ -72,5 +75,20 @@ if __name__ == "__main__":
     config_path = "config.json"
     results_path = "results"
     save_path = "trained_models"
+
+    # specify the experiment name here
     exp_name = "exp_dropout_l2_test_decay1e6"
-    run(data_path, output_path, config_path, results_path, save_path,exp_name=exp_name)
+
+    # specify the model name here 
+    model_name = "model_test.pth"
+    run(
+    data_path=data_path,
+    output_path=output_path,
+    config_path=config_path,
+    results_path=results_path,
+    save_path=save_path,
+    exp_name=exp_name,
+    ablation=False,
+    model_name=model_name
+)
+

@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 
 def train(model, train_loader, val_loader, device, lr=0.001,
           num_epochs=5, weight_decay=0.0,patience=3, use_early_stopping=True, 
-          save_path:str="trained_models"):
+          save_path:str="trained_models",model_name="model.pth",):
     os.makedirs(save_path, exist_ok=True)
     criterion = nn.BCELoss()
 
@@ -81,7 +81,7 @@ def train(model, train_loader, val_loader, device, lr=0.001,
             
      # Final save: only if early stopping is off
     if not use_early_stopping:
-        torch.save(model.state_dict(), os.path.join(save_path, "model.pth"))
+        torch.save(model.state_dict(), os.path.join(save_path, model_name))
         print("Final model saved as model.pth")
 
     return train_losses, val_losses
@@ -91,6 +91,7 @@ if __name__ == "__main__":
     data_path = "data_raw/ratings.dat"
     output_path = "data_preprocessed"
     models_path = "trained_models"
+    model_name= "model_test.pth"
     full_df = process.preprocess(data_path=data_path, output_path=output_path, save=False)
 
     # Split
@@ -106,4 +107,4 @@ if __name__ == "__main__":
     model = NCF(num_users=num_users, num_items=num_items).to(device)
 
     # Train
-    train(model, train_loader, val_loader, device)
+    train(model, train_loader, val_loader, device,model_name=model_name)
