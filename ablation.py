@@ -1,39 +1,74 @@
 import json
-import matplotlib.pyplot as plt
-import seaborn as sns
+import os
+from main import run  # Assumes your main file is named main.py and contains the run() function
 
-def plot_ablation_results(result_path, param_name, plot_val=True):
-    # Load results
-    with open(result_path, "r") as f:
-        results = json.load(f)
+def run_ablation_study(param_name, param_values,
+                       data_path, output_path, config_path,
+                       results_path, save_path):
+    with open(config_path, "r") as f:
+        base_config = json.load(f)
 
-    sns.set(style="whitegrid")
-    plt.figure(figsize=(10, 6))
+    all_results = {}
 
-    for val, losses in results.items():
-        label = f"{param_name}={val}"
-        y = losses["train_loss"] if plot_val else losses["train_loss"]
-        x = list(range(1, len(y) + 1))
-        plt.plot(x, y, label=label)
+    for val in param_values:
+        print(f"Running ablation for {param_name} = {val}")
+        config = base_config.copy()
+        config[param_name] = val
 
-    metric = "Training Loss" if plot_val else "Training Loss"
-    plt.title(f"Ablation Study: {metric} vs {param_name}")
-    plt.xlabel("Epoch")
-    plt.ylabel(metric)
-    plt.legend(title=param_name)
-    plt.tight_layout()
+        # Experiment name
+        exp_name = f"ablation_{param_name}_{val}"
 
-    # Save and show
-    output_fig = result_path.replace(".json", f"_{'val' if plot_val else 'train'}_plot.png")
-    plt.savefig(output_fig, dpi=300)
-    print(f"✅ Plot saved to {output_fig}")
-    plt.show()
+        # Save config for this run 
+        temp_config_path = f"temp_config_{param_name}_{val}.json"
+        with open(temp_config_path, "w") as f:
+            json.dump(config, f, indent=4)
+
+        # Run experiment
+        temp_train_loss, temp_val_loss = run(
+            data_path=data_path,
+            output_path=output_path,
+            config_path=temp_config_path,
+            results_path=results_path,
+            save_path=save_path,
+            exp_name=exp_name,
+            ablation=True
+        )
+        temp_result = {
+            "train_loss": temp_train_loss,
+            "val_loss": temp_val_loss
+        }
+
+
+        all_results[val] = temp_result
+
+        # Clean up temp config
+        os.remove(temp_config_path)
+
+    # Save all ablation results
+    os.makedirs(results_path, exist_ok=True)
+    output_file_path = os.path.join(results_path, f"ablation_{param_name}.json")
+    with open(output_file_path, "w") as f:
+        json.dump(all_results, f, indent=4)
+    
+    print(f" Ablation results saved to {output_file_path}")
+
 
 
 if __name__ == "__main__":
-    # Example usage
-    plot_ablation_results(
-        result_path="ablation_results/ablation_batch_size.json",
-        param_name="batch_size",
-        plot_val=True  # Set to False if you want training loss
-    ) for now dont save the figurea and also p[lot the training loss not the validation loss
+    # Paths
+    DATA_PATH = "data_raw/ratings.dat"
+    OUTPUT_PATH = "data_preprocessed"
+    CONFIG_PATH = "config.json"
+    RESULTS_PATH = "ablation_results"
+    MODEL_PATH = "trained_models"
+
+    # Choose your ablation target
+    run_ablation_study(
+        param_name="batch_size", 
+        param_values=[64,128],
+        data_path=DATA_PATH, 
+        output_path=OUTPUT_PATH, 
+        config_path= CONFIG_PATH,
+        results_path=RESULTS_PATH, 
+        save_path=MODEL_PATH
+    ) 

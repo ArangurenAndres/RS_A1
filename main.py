@@ -10,7 +10,8 @@ import os
 import pandas as pd  # Needed if you use evaluation
 
 def run(data_path: str = None, output_path: str = None, config_path: str = None,
-        results_path: str = "results", save_path: str = None,exp_name:str=None):
+        results_path: str = "results", save_path: str = None,exp_name:str=None,
+        ablation: bool = False):
 
     # 0. Load config file with parameters values
     with open(config_path, 'r') as f:
@@ -54,8 +55,9 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
         "train_loss": train_losses,
         "val_loss": val_losses
     }
-    with open(os.path.join(results_path, exp_name+".json"), "w") as f:
-        json.dump(results, f, indent=4)
+    if not ablation:
+        with open(os.path.join(results_path, exp_name+".json"), "w") as f:
+            json.dump(results, f, indent=4)
 
     # 6. (Optional) Evaluate on test set
     # model_path = os.path.join(save_path, "model.pth")
@@ -64,6 +66,7 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     # all_items = pd.concat([train_df, val_df, test_df])['movieId'].unique()
     # avg_recall, avg_ndcg = evaluate(model, test_df, all_items, device, k=10)
     # print(f"Test Recall@10: {avg_recall:.4f}, NDCG@10: {avg_ndcg:.4f}")
+    return train_losses, val_losses
 
 
 if __name__ == "__main__":
@@ -73,4 +76,4 @@ if __name__ == "__main__":
     results_path = "results"
     save_path = "trained_models"
     exp_name = "exp_dropout_l2_test_decay1e6"
-    run(data_path, output_path, config_path, results_path, save_path,exp_name=exp_name)
+    run(data_path, output_path, config_path, results_path, save_path,exp_name=exp_name,ablation=False)
