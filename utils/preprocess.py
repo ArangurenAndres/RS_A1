@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 def preprocess(data_path: str=None, output_path: str=None, save=False, neg_ratio=1):
     # Load ratings
@@ -68,7 +70,28 @@ def preprocess(data_path: str=None, output_path: str=None, save=False, neg_ratio
     
     return train_df, val_df, test_df
 
+
+
+def plot_label_distribution(train_df, val_df, test_df):
+    # Combine datasets and add split indicator
+    train_df['split'] = 'train'
+    val_df['split'] = 'val'
+    test_df['split'] = 'test'
+    
+    combined = pd.concat([train_df, val_df, test_df], ignore_index=True)
+
+    # Plot
+    plt.figure(figsize=(8, 6))
+    sns.countplot(data=combined, x='split', hue='label')
+    plt.title('Label Distribution Across Splits')
+    plt.xlabel('Data Split')
+    plt.ylabel('Count')
+    plt.legend(title='Label', labels=['Negative (0)', 'Positive (1)'])
+    plt.tight_layout()
+    plt.show()
+
 if __name__ == "__main__":
     data_path = "data_raw/ratings.dat"
     output_path = "data_preprocessed"
-    train_df, val_df, test_df = preprocess(data_path, output_path, save=True)
+    train_df, val_df, test_df = preprocess(data_path, output_path, save=False)
+    plot_label_distribution(train_df, val_df, test_df)
