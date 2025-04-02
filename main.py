@@ -72,5 +72,5 @@ if __name__ == "__main__":
     config_path = "config.json"
     results_path = "results"
     save_path = "trained_models"
-    exp_name = "exp_dropout_l2_test"
+    exp_name = "exp_dropout_l2_test_decay1e6"
     run(data_path, output_path, config_path, results_path, save_path,exp_name=exp_name)
