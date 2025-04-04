@@ -63,8 +63,8 @@ if __name__ == "__main__":
 
     # Choose your ablation target
     run_ablation_study(
-        param_name="batch_size", 
-        param_values=[64,128,256,512,1024],
+        param_name="lr", 
+        param_values=[0.0001,0.0005,0.001,0.005],
         data_path=DATA_PATH, 
         output_path=OUTPUT_PATH, 
         config_path= CONFIG_PATH,

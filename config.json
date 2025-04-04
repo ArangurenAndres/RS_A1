@@ -2,7 +2,7 @@
 
     "lr" : 0.001,
     "num_epochs" : 20,
-    "batch_size" : 128,
+    "batch_size" : 256,
     "patience" : 0,
     "layers" : [64,32,16, 8],
     "embedding_dim" : 16,
