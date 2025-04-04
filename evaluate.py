@@ -1,84 +1,106 @@
-import numpy as np
 import torch
-import os
+import pandas as pd
+import numpy as np
 import json
-from utils import preprocess as process
-from utils import dataloader
+import random
+from tqdm import tqdm
+import os
 from model.model import NCF
-from sklearn.model_selection import train_test_split
+from utils import preprocess_test as process  # or kerem_preprocess
 
-def recall_at_k(recommended, ground_truth, k=10):
-    recommended_k = recommended[:k]
-    hits = len(set(recommended_k) & set(ground_truth))
-    return hits / len(ground_truth) if ground_truth else 0
+def recall_at_k(ranked_list, ground_truth, k):
+    return int(ground_truth in ranked_list[:k])
 
-def ndcg_at_k(recommended, ground_truth, k=10):
-    recommended_k = recommended[:k]
-    dcg = 0.0
-    for i, item in enumerate(recommended_k):
-        if item in ground_truth:
-            dcg += 1 / np.log2(i + 2)
-    idcg = sum(1 / np.log2(i + 2) for i in range(min(len(ground_truth), k)))
-    return dcg / idcg if idcg > 0 else 0
+def ndcg_at_k(ranked_list, ground_truth, k):
+    if ground_truth in ranked_list[:k]:
+        index = ranked_list.index(ground_truth)
+        return 1 / np.log2(index + 2)
+    return 0.0
 
-def evaluate(model, test_data, all_items, device, k=10):
+def evaluate(model, test_df, all_items, device, k=10, num_negative=99):
     model.eval()
-    user_group = test_data.groupby('userId')['movieId'].apply(set).to_dict()
-    recall_scores = []
-    ndcg_scores = []
+    user_item_dict = test_df.groupby("userId")["movieId"].apply(set).to_dict()
 
-    for user in user_group:
-        ground_truth = user_group[user]
-        item_tensor = torch.tensor(list(all_items), dtype=torch.long, device=device)
-        user_tensor = torch.tensor([user] * len(all_items), dtype=torch.long, device=device)
+    recalls = []
+    ndcgs = []
 
-        with torch.no_grad():
-            scores = model(user_tensor, item_tensor)
-            top_k_items = item_tensor[scores.argsort(descending=True)[:k]].tolist()
+    users = list(user_item_dict.keys())
 
-        recall = recall_at_k(top_k_items, ground_truth, k)
-        ndcg = ndcg_at_k(top_k_items, ground_truth, k)
+    with torch.no_grad():
+        for user in tqdm(users, desc="Evaluating"):
+            pos_items = list(user_item_dict[user])
+            if not pos_items:
+                continue
+            pos_item = random.choice(pos_items)
 
-        recall_scores.append(recall)
-        ndcg_scores.append(ndcg)
+            neg_items = set(all_items) - set(pos_items)
+            if len(neg_items) < num_negative:
+                continue
+            sampled_neg_items = random.sample(list(neg_items), num_negative)
 
-    avg_recall = np.mean(recall_scores)
-    avg_ndcg = np.mean(ndcg_scores)
+            test_items = sampled_neg_items + [pos_item]
+            item_tensor = torch.tensor(test_items, dtype=torch.long).to(device)
+            user_tensor = torch.tensor([user] * len(test_items), dtype=torch.long).to(device)
+
+            scores = model(user_tensor, item_tensor).cpu().numpy()
+            ranked_items = [x for _, x in sorted(zip(scores, test_items), reverse=True)]
+
+            recalls.append(recall_at_k(ranked_items, pos_item, k))
+            ndcgs.append(ndcg_at_k(ranked_items, pos_item, k))
+
+    avg_recall = np.mean(recalls)
+    avg_ndcg = np.mean(ndcgs)
     return avg_recall, avg_ndcg
 
-if __name__ == "__main__":
-    # Paths
-    data_path = "data_raw/ratings.dat"
-    output_path = "data_preprocessed"
-    config_path = "config.json"
-    model_path = os.path.join("trained_models", "model.pth")
-
-    # Load config
-    with open(config_path, 'r') as f:
-        config = json.load(f)
-    batch_size = config['batch_size']
-
-    # Device
+def run_evaluation(model_path="trained_models/model_test.pth",
+                   config_path="config.json",
+                   results_path="results/eval_metrics.json",
+                   meta_path="trained_models/meta.json",
+                   k=10,
+                   num_negative=99):
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Preprocess and split data
-    full_data = process.preprocess(data_path, output_path)
-    train_data, temp_data = train_test_split(full_data, test_size=0.3, random_state=42, shuffle=True)
-    val_data, test_data = train_test_split(temp_data, test_size=0.5, random_state=42, shuffle=True)
+    # Load model metadata (num_users, num_items)
+    with open(meta_path, "r") as f:
+        meta = json.load(f)
+    num_users = meta["num_users"]
+    num_items = meta["num_items"]
 
-    # Get number of users/items
-    _, num_users, num_items = dataloader.get_dataloader_from_df(train_data, batch_size=batch_size, shuffle=True)
+    # Load model config (to get embedding/layer info)
+    with open(config_path, "r") as f:
+        config = json.load(f)
 
-    # Load model
-    model = NCF(num_users=num_users, num_items=num_items).to(device)
+    # Preprocess test data
+    train_df, val_df, test_df = process.preprocess()
+    all_items = pd.concat([train_df, val_df, test_df])["movieId"].unique()
+
+    # Reconstruct model
+    model = NCF(
+        num_users=num_users,
+        num_items=num_items,
+        embedding_dim=config["embedding_dim"],
+        mlp_layers=config["layers"],
+        dropout_rate=config["dropout_rate"]
+    ).to(device)
+
     model.load_state_dict(torch.load(model_path, map_location=device))
-    model.eval()
-    print(f"Loaded model from {model_path}")
 
-    # Evaluate
-    all_items = full_data['movieId'].unique()
-    avg_recall, avg_ndcg = evaluate(model, test_data, all_items, device, k=10)
+    # Run evaluation
+    recall, ndcg = evaluate(model, test_df, all_items, device, k=k, num_negative=num_negative)
+    print(f"Recall@{k}: {recall:.4f}")
+    print(f"NDCG@{k}: {ndcg:.4f}")
 
-    print(f"\nEvaluation Results:")
-    print(f"Recall@10: {avg_recall:.4f}")
-    print(f"NDCG@10:  {avg_ndcg:.4f}")
+    # Save evaluation results
+    os.makedirs(os.path.dirname(results_path), exist_ok=True)
+    with open(results_path, "w") as f:
+        json.dump({"Recall@10": recall, "NDCG@10": ndcg}, f, indent=4)
+
+    return recall, ndcg
+
+if __name__ == "__main__":
+    model_path = "trained_models/model_test.pth"
+    config_path = "config.json"
+    results_path = "results/eval_metrics.json"
+    meta_path = "trained_models/meta.json"
+    run_evaluation()
