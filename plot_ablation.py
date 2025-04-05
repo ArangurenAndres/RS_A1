@@ -27,6 +27,6 @@ def plot_ablation_results(result_path, param_name):
 
 if __name__ == "__main__":
     plot_ablation_results(
-        result_path="ablation_results/embedding_dim.json",
+        result_path="ablation_results/ablation_embedding_dim.json",
         param_name="Embedding Dimension"
     )
