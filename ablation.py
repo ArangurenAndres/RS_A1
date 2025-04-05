@@ -63,8 +63,8 @@ if __name__ == "__main__":
 
     # Choose your ablation target
     run_ablation_study(
-        param_name="lr", 
-        param_values=[0.0001,0.0005,0.001,0.005],
+        param_name="embedding_dim", 
+        param_values=[8,16,32,64],
         data_path=DATA_PATH, 
         output_path=OUTPUT_PATH, 
         config_path= CONFIG_PATH,
