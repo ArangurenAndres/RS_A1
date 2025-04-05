@@ -67,7 +67,7 @@ if __name__ == "__main__":
         param_values=[8,16,32,64],
         data_path=DATA_PATH, 
         output_path=OUTPUT_PATH, 
-        config_path= CONFIG_PATH,
+        config_path=CONFIG_PATH,
         results_path=RESULTS_PATH, 
         save_path=MODEL_PATH
-    ) 
+    )
