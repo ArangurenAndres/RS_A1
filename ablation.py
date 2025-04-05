@@ -63,11 +63,18 @@ if __name__ == "__main__":
 
     # Choose your ablation target
     run_ablation_study(
-        param_name="lr", 
-        param_values=[0.0001,0.0005,0.001,0.005],
+        param_name="layers", 
+        param_values=[
+            [64],
+            [64, 32],
+            [64, 32, 16],
+            [64, 32, 16, 8],
+            [128, 64, 32, 16, 8],
+            [128, 64, 32, 16, 8, 4]
+        ],
         data_path=DATA_PATH, 
         output_path=OUTPUT_PATH, 
-        config_path= CONFIG_PATH,
+        config_path=CONFIG_PATH,
         results_path=RESULTS_PATH, 
         save_path=MODEL_PATH
-    ) 
+    )

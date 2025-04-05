@@ -27,6 +27,6 @@ def plot_ablation_results(result_path, param_name):
 
 if __name__ == "__main__":
     plot_ablation_results(
-        result_path="ablation_results/ablation_batch_size.json",
+        result_path="ablation_results/ablation_layers.json",
         param_name="batch_size"
     )
