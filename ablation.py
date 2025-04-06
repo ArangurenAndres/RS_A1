@@ -24,7 +24,7 @@ def run_ablation_study(param_name, param_values,
             json.dump(config, f, indent=4)
 
         # Run training
-        train_loss = run(
+        train_loss,_ = run(
             data_path=data_path,
             output_path=output_path,
             config_path=temp_config_path,
@@ -63,11 +63,17 @@ if __name__ == "__main__":
 
     # Choose your ablation target
     run_ablation_study(
-        param_name="embedding_dim", 
-        param_values=[8,16,32,64],
+        param_name="layers", 
+        param_values=[
+            [64],
+            [64, 32],
+            [64, 32, 16],
+            [64, 32, 16, 8],
+            [128, 64, 32, 16, 8],
+        ],
         data_path=DATA_PATH, 
         output_path=OUTPUT_PATH, 
         config_path=CONFIG_PATH,
         results_path=RESULTS_PATH, 
         save_path=MODEL_PATH
-    )
+)

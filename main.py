@@ -1,14 +1,7 @@
-from utils import preprocess_test as process
 from utils import dataloader as dataloader
 from model.model import NCF
 from train import train
-import torch
-import json
-import os
-from utils import preprocess_test as process
-from utils import dataloader as dataloader
-from model.model import NCF
-from train import train
+from utils.data_preprocessing import load_and_preprocess_data  # <-- Change to actual file name
 import torch
 import json
 import os
@@ -32,12 +25,13 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     dropout_rate = config['dropout_rate']
     weight_decay = config['weight_decay']   
 
-    # 2. Preprocess data
-    train_df, val_df, test_df = process.preprocess()
+    # 2. Load and preprocess data
+    train_df, val_df, test_df, num_users, num_items = load_and_preprocess_data(data_path)
 
-    # 3. Dataloader (only train_loader needed)
-    train_loader, num_users, num_items = dataloader.get_dataloader_from_df(train_df, batch_size=batch_size, shuffle=True)
-    
+    # 3. Create data loaders
+    train_loader = dataloader.get_dataloader_from_df(train_df, batch_size=batch_size, shuffle=True)[0]
+    val_loader = dataloader.get_dataloader_from_df(val_df, batch_size=batch_size, shuffle=False)[0]
+
     # 4. Initialize model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = NCF(
@@ -48,11 +42,12 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
         dropout_rate=dropout_rate
     ).to(device)
 
-    # 5. Train the model (no validation loss used)
+    # 5. Train the model
     os.makedirs(save_path, exist_ok=True)
-    train_losses = train(
+    train_losses, val_losses = train(
         model=model,
         train_loader=train_loader,
+        val_loader=val_loader,
         device=device,
         lr=lr,
         num_epochs=num_epochs,
@@ -61,10 +56,11 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
         model_name=model_name
     )
 
-    # 6. Save training losses
+    # 6. Save training & validation losses
     os.makedirs(results_path, exist_ok=True)
     results = {
-        "train_loss": train_losses
+        "train_loss": train_losses,
+        "val_loss": val_losses
     }
 
     if not ablation:
@@ -75,17 +71,17 @@ def run(data_path: str = None, output_path: str = None, config_path: str = None,
     metadata = {
         "num_users": int(num_users),
         "num_items": int(num_items)
-        }
-    meta_name = "meta_"+exp_name+".json"
+    }
+    meta_name = "meta_" + exp_name + ".json"
     with open(os.path.join(save_path, meta_name), "w") as f:
         json.dump(metadata, f, indent=4)
 
-    return train_losses
+    return train_losses, val_losses
 
 
 if __name__ == "__main__":
     data_path = "data_raw/ratings.dat"
-    output_path = "data_preprocessed"
+    output_path = "data_preprocessed"  # Not used in current version, but kept for consistency
     config_path = "config.json"
     results_path = "results"
     save_path = "trained_models"
@@ -95,6 +91,7 @@ if __name__ == "__main__":
 
     # specify the model name here 
     model_name = "model_test.pth"
+
     run(
         data_path=data_path,
         output_path=output_path,
@@ -105,8 +102,3 @@ if __name__ == "__main__":
         ablation=False,
         model_name=model_name
     )
-
-
-
-
-
