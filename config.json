@@ -1,11 +1,11 @@
 {
-    "lr" : 0.001,
-    "num_epochs" : 20,
-    "batch_size" : 256,
+    "lr" : 0.0005,
+    "num_epochs" : 25,
+    "batch_size" : 512,
     "patience" : 0,
     "layers" : [64,32,16, 8],
-    "embedding_dim" : 16,
-    "dropout_rate" : 0.2,
-    "weight_decay" : 1e-5
+    "embedding_dim" : 32,
+    "dropout_rate" : 0.05,
+    "weight_decay" : 1e-7
     
 }
